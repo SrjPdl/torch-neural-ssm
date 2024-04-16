@@ -47,6 +47,7 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
 
         self.outputs = list()
         self.validation_step_outputs = list()
+        self.batch_outputs = list()
 
     def forward(self, x, generation_len):
         """ Placeholder function for the dynamics forward pass """
@@ -281,18 +282,19 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
         # Build output dictionary
         out = {"states": states.detach().cpu(), "embeddings": embeddings.detach().cpu(),
                "preds": preds.detach().cpu(), "images": images.detach().cpu(), "labels": labels.detach().cpu()}
+        self.batch_outputs.append(out)
         return out
 
-    def test_epoch_end(self, batch_outputs):
+    def on_test_epoch_end(self):
         """
         For testing end, save the predictions, gt, and MSE to NPY files in the respective experiment folder
         :param outputs: list of outputs from the validation steps at batch 0
         """
         # Stack all output types and convert to numpy
         outputs = dict()
-        for key in batch_outputs[0].keys():
+        for key in self.batch_outputs[0].keys():
             stack_method = torch.concatenate if key == "som_assignments" else torch.vstack
-            outputs[key] = stack_method([output[key] for output in batch_outputs]).numpy()
+            outputs[key] = stack_method([output[key] for output in self.batch_outputs]).numpy()
 
         # Iterate through each metric function and add to a dictionary
         out_metrics = {}
@@ -341,3 +343,4 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
         with open(f"{output_path}/test_{self.setting}_excel.txt", 'w') as f:
             for metric in self.cfg.training.metrics:
                 f.write(f"{out_metrics[f'{metric}_mean']:0.3f}({out_metrics[f'{metric}_std']:0.3f}),")
+        self.batch_outputs = list()
