@@ -22,15 +22,15 @@ class FakeEncoder(nn.Module):
 
 
 class VRNN(LatentDynamicsModel):
-    def __init__(self, args, top, exptop):
+    def __init__(self, args):
         """ Latent dynamics as parameterized by a global deterministic neural ODE """
-        super().__init__(args, top, exptop)
-
+        super().__init__(args)
+        self.args = args
         self.encoder = FakeEncoder(args)
 
         ### General parameters
-        self.x_dim = self.args.dim ** 2
-        self.z_dim = self.args.latent_dim
+        self.x_dim = self.args.model.architecture.dim ** 2
+        self.z_dim = self.args.model.architecture.latent_dim
         self.dropout_p = 0.2
         self.y_dim = self.x_dim
         self.activation = nn.LeakyReLU(0.1)
@@ -197,9 +197,9 @@ class VRNN(LatentDynamicsModel):
         c_t = torch.zeros(self.num_RNN, batch_size, self.dim_RNN).to(self.args.gpus[0])
 
         # For the observed frames, use real input; otherwise use previous generated frame
-        feature_x_obs = self.feature_extractor_x(x[:self.args.z_amort])
+        feature_x_obs = self.feature_extractor_x(x[:self.args.training.z_amort])
         for t in range(generation_len):
-            if t < self.args.z_amort:
+            if t < self.args.training.z_amort:
                 feature_xt = feature_x_obs[t, :, :].unsqueeze(0)
             else:
                 feature_xt = self.feature_extractor_x(y_prev)
@@ -220,7 +220,7 @@ class VRNN(LatentDynamicsModel):
         self.z_mean_p, self.z_logvar_p = self.generation_z(h)
 
         # Reshape and permute reconstructions + embeddings back to useable shapes
-        y = y.permute(1, 0, 2).reshape([batch_size, seq_len, self.args.dim, self.args.dim])
+        y = y.permute(1, 0, 2).reshape([batch_size, seq_len, self.args.model.architecture.dim, self.args.model.architecture.dim])
         embeddings = self.z.permute(1, 0, 2)
         return y, embeddings
 
