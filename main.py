@@ -49,7 +49,7 @@ def main(cfg: DictConfig):
         gradient_clip_val=5.0,
         val_check_interval=cfg.training.val_log_interval,
         num_sanity_val_steps=0,
-        auto_select_gpus=True,
+        devices='auto',
         logger=tb_logger
     )
 
