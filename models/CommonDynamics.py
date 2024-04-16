@@ -264,7 +264,10 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
 
         # Get image reconstructions
         show_images(self.validation_step_outputs[0]["images"], self.validation_step_outputs[0]["preds"],
+          
                     f'{self.logger.log_dir}/images/recon{self.n_updates}val.png', num_out=5)
+        # Clear out the old cache            
+        self.validation_step_outputs = list()
 
     def test_step(self, batch, batch_idx):
         """
