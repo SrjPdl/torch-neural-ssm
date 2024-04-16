@@ -46,7 +46,7 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
         self.reconstruction_loss = nn.MSELoss(reduction='none')
 
         self.outputs = list()
-        self.val_outputs = list()
+        self.validation_step_outputs = list()
 
     def forward(self, x, generation_len):
         """ Placeholder function for the dynamics forward pass """
@@ -250,7 +250,7 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
         if batch_idx < self.cfg.dataset.batches_to_save:
             out["preds"] = preds.detach()
             out["images"] = images.detach()
-        self.val_outputs = out
+        self.validation_step_outputs.append(out)
         return out
 
     def on_validation_epoch_end(self):
@@ -258,12 +258,12 @@ class LatentDynamicsModel(pytorch_lightning.LightningModule):
         Every N epochs, get a validation reconstruction sample
         """
         # Log epoch metrics on saved batches
-        metrics = self.get_epoch_metrics(self.val_outputs[:self.cfg.dataset.batches_to_save], setting='val')
+        metrics = self.get_epoch_metrics(self.validation_step_outputs[:self.cfg.dataset.batches_to_save], setting='val')
         for metric in metrics.keys():
             self.log(f"val_{metric}", metrics[metric], prog_bar=True)
 
         # Get image reconstructions
-        show_images(self.val_outputs[0]["images"], self.val_outputs[0]["preds"],
+        show_images(self.validation_step_outputs[0]["images"], self.validation_step_outputs[0]["preds"],
                     f'{self.logger.log_dir}/images/recon{self.n_updates}val.png', num_out=5)
 
     def test_step(self, batch, batch_idx):
